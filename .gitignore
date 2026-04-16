@@ -1,0 +1,48 @@
+# Build artifacts
+target/
+build/
+*.jar
+*.war
+*.ear
+*.class
+.mvn/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+logs/
+
+# IMPORTANT: Never commit credentials & sensitive files!
+.env
+.env.local
+application-local.properties
+credentials.json
+
+# Docker overrides
+docker-compose.override.yml
+
+# ngrok
+ngrok.yml
+
+# Testing
+*.test.yml
+test-output/

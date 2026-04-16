@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Flight Board</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <style>
+        body { margin: 0; font-family: sans-serif; background: #0d1117; color: #cdd9e5; }
+        #map { width: 100vw; height: 100vh; }
+        #hud {
+            position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); padding: 8px 20px; border-radius: 8px;
+            font-size: 14px; z-index: 999;
+        }
+
+        /*
+         * FIX: Plane rotation was previously applied by appending to
+         * element.style.transform inline, which accumulated on every update
+         * (e.g. "translate(...) rotate(45deg) rotate(90deg) rotate(135deg)...").
+         *
+         * Instead we use a CSS custom property --heading so Leaflet's own
+         * translate() is untouched and only the heading value changes.
+         */
+        .plane-icon {
+            font-size: 18px;
+            line-height: 1;
+            display: inline-block;
+            transform-origin: center center;
+            /* Leaflet sets its own translate via style; we add rotation on top */
+            transform: rotate(var(--heading, 0deg));
+            transition: transform 0.4s ease;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+<div id="hud">✈ Live Flights: <strong id="count">—</strong> &nbsp;|&nbsp; Last update: <span id="time">—</span></div>
+<div id="map"></div>
+
+<script>
+  const map = L.map('map').setView([48, 10], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
+  }).addTo(map);
+
+  function makePlaneIcon(heading) {
+      return L.divIcon({
+          className: '',
+          // FIX: heading stored in a CSS custom property so Leaflet's own
+          // translate transform is not disturbed on update.
+          html: `<span class="plane-icon" style="--heading:${heading ?? 0}deg">✈</span>`,
+          iconSize:   [20, 20],
+          iconAnchor: [10, 10]
+      });
+  }
+
+  let markers = {};
+
+  function buildLabel(f) {
+      return `<b>${f.callsign || f.icao24}</b><br>
+          🌍 ${f.originCountry || '?'}<br>
+          📡 ${f.altitude ? Math.round(f.altitude) + ' m' : 'ground'}<br>
+          💨 ${f.velocity ? Math.round(f.velocity * 3.6) + ' km/h' : '—'}<br>
+          🧭 ${f.trueTrack != null ? Math.round(f.trueTrack) + '°' : '—'}`;
+  }
+
+  function updateFlights(flights) {
+      const seen = new Set();
+
+      flights.forEach(f => {
+          if (!f.icao24 || f.latitude == null) return;
+          seen.add(f.icao24);
+
+          const latlng  = [f.latitude, f.longitude];
+          const label   = buildLabel(f);
+          const heading = f.trueTrack ?? 0;
+
+          if (markers[f.icao24]) {
+              const marker = markers[f.icao24];
+              marker.setLatLng(latlng).setPopupContent(label);
+
+              // FIX: update only the CSS custom property, not the whole transform
+              const el = marker.getElement();
+              if (el) {
+                  const span = el.querySelector('.plane-icon');
+                  if (span) span.style.setProperty('--heading', heading + 'deg');
+              }
+          } else {
+              markers[f.icao24] = L.marker(latlng, { icon: makePlaneIcon(heading) })
+                  .bindPopup(label)
+                  .addTo(map);
+          }
+      });
+
+      // Remove stale markers
+      Object.keys(markers).forEach(id => {
+          if (!seen.has(id)) { markers[id].remove(); delete markers[id]; }
+      });
+
+      document.getElementById('count').textContent = flights.length;
+      document.getElementById('time').textContent  = new Date().toLocaleTimeString();
+  }
+
+  // WebSocket connection
+  const socket = new SockJS('/ws-flights');
+  const stomp  = Stomp.over(socket);
+  stomp.debug  = null; // suppress debug logs
+
+  stomp.connect({}, () => {
+      stomp.subscribe('/topic/flights', msg => {
+          const flights = JSON.parse(msg.body);
+          updateFlights(flights);
+      });
+  });
+</script>
+</body>
+</html>

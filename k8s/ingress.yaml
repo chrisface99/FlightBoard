@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flight-board
+  labels:
+    app: flight-board
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  # Update 'flight-board.example.com' to your actual domain
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - flight-board.example.org  # Your domain
+    secretName: flight-board-tls
+  rules:
+  - host: flight-board.example.org  # Your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flight-board
+            port:
+              number: 80
+
+---
+# Alternative: For local development without DNS
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flight-board-local
+  labels:
+    app: flight-board
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flight-board
+            port:
+              number: 80

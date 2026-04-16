@@ -1,0 +1,34 @@
+version: '3.9'
+
+services:
+  flight-board:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flight-board-app
+    ports:
+      - "8080:8080"
+    environment:
+      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-chrisface99-api-client}
+      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-zOjrreqQtvoGPAFYiSxZdlyUZuRtNZ3m}
+      OPENSKY_OAUTH_URL: https://opensky-network.org/api/v2/oauth/token
+      JAVA_OPTS: "-Xmx768m -Xms256m"
+      SPRING_PROFILES_ACTIVE: docker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - flight-network
+    # Uncomment to enable debugging
+    # ports:
+    #   - "5005:5005"
+    # environment:
+    #   JAVA_OPTS: "-Xmx768m -Xms256m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+
+networks:
+  flight-network:
+    driver: bridge

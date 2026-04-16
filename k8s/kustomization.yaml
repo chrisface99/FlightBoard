@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Remove hardcoded namespace to allow kubectl -n flag to override
+
+labels:
+- includeSelectors: true
+  pairs:
+    app: flight-board
+    managed-by: kustomize
+
+commonAnnotations:
+  owner: "flight-board-team"
+  created: "2026-04-16"
+
+resources:
+- rbac.yaml
+- configmap.yaml
+- secret.yaml
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+- hpa.yaml
+
+replicas:
+- name: flight-board
+  count: 3
+
+images:
+- name: flight-board
+  newName: flight-board
+  newTag: latest
+
+# Configure the imageRegistry for all images
+# Uncomment and modify for your registry
+# images:
+# - name: eclipse-temurin
+#   newRegistry: myregistry.azurecr.io
+
+# Patches for environment-specific overrides
+# patchesStrategicMerge:
+# - deployment-patch.yaml
+
+# Examples of environment-specific variants
+# Could be production, staging, development

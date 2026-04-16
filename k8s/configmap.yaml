@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flight-board-config
+  labels:
+    app: flight-board
+data:
+  OPENSKY_OAUTH_URL: "https://opensky-network.org/api/v2/oauth/token"
+  SPRING_PROFILES_ACTIVE: "docker,k8s"
+  JAVA_OPTS: "-Xmx512m -Xms256m"
+  # Additional configuration
+  SCHEDULER_INTERVAL: "10000"
+  BOUNDING_BOX_LAT_MIN: "36.0"
+  BOUNDING_BOX_LON_MIN: "-10.0"
+  BOUNDING_BOX_LAT_MAX: "60.0"
+  BOUNDING_BOX_LON_MAX: "30.0"
